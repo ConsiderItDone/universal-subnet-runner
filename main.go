@@ -61,6 +61,7 @@ func shutdownOnSignal(
 // and waits for all nodes to become healthy.
 // The network runs until the user provides a SIGINT or SIGTERM.
 func main() {
+	flag.Parse()
 	// Create the logger
 	logFactory := logging.NewFactory(logging.Config{
 		DisplayLevel: logging.Info,
