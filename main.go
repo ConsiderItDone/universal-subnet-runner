@@ -3,11 +3,11 @@ package main
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"go/build"
 	"io"
-	"math/rand"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,6 +21,7 @@ import (
 
 const (
 	healthyTimeout = 2 * time.Minute
+	defaultShift   = 10
 )
 
 var (
@@ -32,9 +33,16 @@ var (
 
 	pluginID = flag.String("plugin-id", "srEXiWaHuhNyGwPUi444Tu47ZEDwxTWrbQiuD7FmgSAQ6X7Dy", "ID of vm plugin in cb58 format")
 
+	configs []NetworkConfig
+
 	//go:embed data/genesis
 	genesis []byte
 )
+
+type NetworkConfig struct {
+	NetworkID    uint32
+	PortShifting int
+}
 
 // Blocks until a signal is received on [signalChan], upon which
 // [n.Stop()] is called. If [signalChan] is closed, does nothing.
@@ -76,13 +84,31 @@ func main() {
 		goPath = build.Default.GOPATH
 	}
 
+	configFilePath := fmt.Sprintf("%s/universal-subnet-runner/config.json", home)
+
+	// Check if the file exists
+	if _, err = os.Stat(configFilePath); err == nil {
+		// File exists, so read its content
+		data, err := os.ReadFile(configFilePath)
+		if err != nil {
+			log.Error("Error reading file:", zap.Error(err))
+			return
+		}
+
+		err = json.Unmarshal(data, &configs)
+		if err != nil {
+			log.Error("Error unmarshalling JSON:", zap.Error(err))
+			return
+		}
+	}
+
 	binaryPath := fmt.Sprintf("%s/universal-subnet-runner/avalanchego", home)
-	workDir := fmt.Sprintf("%s/universal-subnet-runner/%d/nodes", home, time.Now().Unix())
+	workDir := fmt.Sprintf("%s/universal-subnet-runner/networks/%d/nodes", home, time.Now().Unix())
 
 	os.RemoveAll(workDir)
 	os.MkdirAll(workDir, 0777)
 
-	if err := run(log, binaryPath, workDir); err != nil {
+	if err := run(log, configFilePath, binaryPath, workDir); err != nil {
 		log.Fatal("fatal error", zap.Error(err))
 		os.Exit(1)
 	}
@@ -129,13 +155,13 @@ func copy(src, dst string) (int64, error) {
 	return nBytes, err
 }
 
-func run(log logging.Logger, binaryPath string, workDir string) error {
+func run(log logging.Logger, configFilePath string, binaryPath string, workDir string) error {
 	// Create the network
 	nwConfig, err := local.NewDefaultConfig(fmt.Sprintf("%s/avalanchego", binaryPath))
 	if err != nil {
 		return err
 	}
-	shift := rand.Intn(100)
+	shift := defaultShift * len(configs)
 	for i := 0; i < len(nwConfig.NodeConfigs); i++ {
 		nwConfig.NodeConfigs[i].Flags["http-port"] = nwConfig.NodeConfigs[i].Flags["http-port"].(int) + shift
 		nwConfig.NodeConfigs[i].Flags["staking-port"] = nwConfig.NodeConfigs[i].Flags["staking-port"].(int) + shift
@@ -152,6 +178,29 @@ func run(log logging.Logger, binaryPath string, workDir string) error {
 			log.Info("error stopping network", zap.Error(err))
 		}
 	}()
+
+	networkID, err := nw.GetNetworkID()
+	if err != nil {
+		return err
+	}
+
+	// Add a new record to the slice
+	networkConfig := NetworkConfig{NetworkID: networkID, PortShifting: shift}
+	configs = append(configs, networkConfig)
+
+	// Marshal the updated slice back to JSON
+	updatedConfigContent, err := json.MarshalIndent(configs, "", "  ")
+	if err != nil {
+		log.Error("Error marshalling JSON:", zap.Error(err))
+		return err
+	}
+
+	// Write the updated JSON back to the file
+	err = os.WriteFile(configFilePath, updatedConfigContent, 0644)
+	if err != nil {
+		log.Error("Error writing to file:", zap.Error(err))
+		return err
+	}
 
 	// When we get a SIGINT or SIGTERM, stop the network and close [closedOnShutdownCh]
 	signalsChan := make(chan os.Signal, 1)
