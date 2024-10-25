@@ -76,8 +76,8 @@ func main() {
 		goPath = build.Default.GOPATH
 	}
 
-	binaryPath := fmt.Sprintf("%s/e2e-test/avalanchego", home)
-	workDir := fmt.Sprintf("%s/e2e-test/nodes", home)
+	binaryPath := fmt.Sprintf("%s/universal-subnet-runner/avalanchego", home)
+	workDir := fmt.Sprintf("%s/universal-subnet-runner/%d/nodes", home, time.Now().Unix())
 
 	os.RemoveAll(workDir)
 	os.MkdirAll(workDir, 0777)
