@@ -1,5 +1,5 @@
 # universal-subnet-runner
-This utility is intended for deployment up to ~10 local subnets with default configuration {warp API enabled, 5 nodes, blockchain specified by plugin ID}.
+This utility is intended for deployment local subnets with default configuration {warp API enabled, 5 nodes, blockchain specified by plugin ID}.
 
 ## environment preparation 
  - Create new directory with name "universal-subnet-runner" in the $HOME directory
