@@ -1,5 +1,5 @@
 # universal-subnet-runner
-This utility is intended for deployment local subnets with default configuration {warp API enabled, 5 nodes, blockchain specified by plugin ID}.
+This utility is intended for deployment local subnets with default configuration {warp API enabled, 3 nodes, blockchain specified by plugin ID}.
 
 ## environment preparation 
  - Create new directory with name "universal-subnet-runner" in the $HOME directory
@@ -11,9 +11,9 @@ This utility is intended for deployment local subnets with default configuration
 To configure and deploy subnet on local environment you should run the command
 
 ```sh
-go build main.go --vm-name {vm name} --plugin-id {plugin id in CB58 format}
+go build main.go --vm-name {vm name} --plugin-id {plugin id in CB58 format} --amount-of-subnets {amount}
 ```
 
 ```sh
-go build main.go --vm-name xsvm --plugin-id v3m4wPxaHpvGr8qfMeyK6PRW3idZrPHmYcMTt7oXdK47yurVH
+go build main.go --vm-name xsvm --plugin-id v3m4wPxaHpvGr8qfMeyK6PRW3idZrPHmYcMTt7oXdK47yurVH --amount-of-subnets 2
 ```
